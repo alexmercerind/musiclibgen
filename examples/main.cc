@@ -16,9 +16,10 @@ void Callback(int32_t completed, int32_t total) {
 }
 
 int32_t main() {
-  // Current benchmarks for 249 files:
-  // 8900ms  : multi-threaded.
-  // 18123ms : single-threaded.
+  // Current benchmarks for indexing 249 files recursively:
+  // 2219ms : multi-threaded (release, no-cache, writing album arts).
+  // 1517ms : multi-threaded (release, no-cache, existing album arts).
+  // 8900ms : multi-threaded (debug  , no-cache, writing album arts).
   ::start = std::chrono::high_resolution_clock::now();
   const char* library_paths[] = {"C:\\Users\\alexmercerind\\Music"};
   LibrarySetCachePath("C:\\Users\\alexmercerind\\.library");
