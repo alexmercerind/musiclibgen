@@ -25,25 +25,25 @@
 #include "structs.h"
 #include "utils.h"
 
-void InsertTrack(Track track) {
+static inline void InsertTrack(Track track) {
   char* track_insert_error;
   std::string query =
       std::string("INSERT INTO Tracks VALUES('") + track.track_name + "', '" +
-      track.track_artist_names + "', '" + track.album_artist_name + "', '" +
-      track.track_number + "', '" + track.album_length + "', '" + track.year +
-      "', '" + track.genre + "', '" + track.writer_name + "', '" +
-      track.track_duration + "', '" + track.bitrate + "', '" +
-      track.album_art_uri + "', '" + track.file_path + "', '" +
-      std::to_string(track.file_size) + "', '" +
+      track.track_artist_names + "', '" + track.album_name + "', '" +
+      track.album_artist_name + "', '" + track.track_number + "', '" +
+      track.album_length + "', '" + track.year + "', '" + track.genre + "', '" +
+      track.writer_name + "', '" + track.track_duration + "', '" +
+      track.bitrate + "', '" + track.album_art_uri + "', '" + track.file_path +
+      "', '" + std::to_string(track.file_size) + "', '" +
       std::to_string(track.file_time) + "');";
-  if (sqlite3_exec(g_library_database, query.c_str(), nullptr, 0,
+  if (sqlite3_exec(g_library_cache, query.c_str(), nullptr, 0,
                    &track_insert_error) != S_OK) {
     DEBUG_LOG(track_insert_error);
     DEBUG_LOG(track.file_path);
   }
 }
 
-std::string GetAlbumArtPath(std::filesystem::path file_path) {
+static inline std::string GetAlbumArtPath(std::filesystem::path file_path) {
   auto file_name = file_path.filename().string();
   file_name.erase(std::remove_if(file_name.begin(), file_name.end(),
                                  [](char c) { return !std::isalnum(c); }),
@@ -53,7 +53,28 @@ std::string GetAlbumArtPath(std::filesystem::path file_path) {
          ".jpg";
 }
 
-std::optional<Track> GetTrack(std::filesystem::directory_entry entry) {
+static inline Track GetTrackFromCache(char** argv) {
+  Track track;
+  strncpy(track.track_name, argv[0], 255);
+  strncpy(track.track_artist_names, argv[1], 1024);
+  strncpy(track.album_name, argv[2], 255);
+  strncpy(track.album_artist_name, argv[3], 255);
+  strncpy(track.track_number, argv[4], 255);
+  strncpy(track.album_length, argv[5], 255);
+  strncpy(track.year, argv[6], 255);
+  strncpy(track.genre, argv[7], 255);
+  strncpy(track.writer_name, argv[8], 255);
+  strncpy(track.track_duration, argv[9], 255);
+  strncpy(track.bitrate, argv[10], 255);
+  strncpy(track.album_art_uri, argv[11], 1024);
+  strncpy(track.file_path, argv[12], 1024);
+  track.file_size = strtoull(argv[13], nullptr, 10);
+  track.file_time = strtoull(argv[14], nullptr, 10);
+  return track;
+}
+
+static inline std::optional<Track> GetTrackFromEntry(
+    std::filesystem::directory_entry entry) {
   auto file_path = entry.path().string();
   auto file_size = entry.file_size();
   auto file_time = entry.last_write_time().time_since_epoch().count();

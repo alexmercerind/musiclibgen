@@ -35,9 +35,13 @@
 extern "C" {
 #endif
 
+DLLEXPORT void LibrarySetProgressCallback(void (*callback)(int32_t completed,
+                                                           int32_t total));
 DLLEXPORT void LibrarySetCachePath(const char* path);
 DLLEXPORT void LibrarySetLibraryPaths(int32_t size, const char** paths);
-DLLEXPORT void LibraryIndex(void (*callback)(int32_t completed, int32_t total));
+DLLEXPORT void LibraryCreate();
+DLLEXPORT int32_t LibraryGetTrackCount();
+DLLEXPORT Track* LibraryGetTracks();
 
 #ifdef __cplusplus
 }
