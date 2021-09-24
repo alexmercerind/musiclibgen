@@ -41,8 +41,6 @@ static inline void InsertTrack(Track track) {
                    &track_insert_error) != S_OK) {
     DEBUG_LOG(track_insert_error);
     DEBUG_LOG(track.file_path);
-  } else {
-    g_tracks.emplace_back(track);
   }
 }
 

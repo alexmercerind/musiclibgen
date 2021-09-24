@@ -26,15 +26,10 @@ extern "C" {
 #endif
 
 static auto g_entries = std::vector<std::filesystem::directory_entry>{};
-
 static void (*g_progress_callback)(int32_t, int32_t) = nullptr;
-
 static auto g_count = 0;
 static auto g_futures = std::vector<std::future<void>>{};
-
-static auto library_create_promise = std::promise<void>();
-static auto library_create_completed = false;
-
+static auto g_library_create_promise = std::promise<void>();
 static auto g_mutex = std::mutex();
 
 static inline int32_t LibraryCallback(void*, int argc, char** argv,
@@ -69,6 +64,7 @@ static inline void LibraryIndexAlbumsArtists() {
 
 static inline void LibraryIndex() {
   g_count = 0;
+  g_library_create_promise = std::promise<void>();
   for (const auto& entry : g_entries) {
     g_futures.emplace_back(std::async([=]() {
       auto track = GetTrackFromEntry(entry);
@@ -83,14 +79,11 @@ static inline void LibraryIndex() {
         for (const auto& track : g_tracks) {
           InsertTrack(track);
         }
-        if (!library_create_completed) {
-          library_create_promise.set_value();
-          library_create_completed = true;
-        }
+        LibraryIndexAlbumsArtists();
+        g_library_create_promise.set_value();
       }
     }));
   }
-  LibraryIndexAlbumsArtists();
 }
 
 DLLEXPORT
@@ -141,6 +134,7 @@ DLLEXPORT void LibraryRefresh() {
     }
     return !exists;
   });
+  int32_t count = 1;
   for (const auto& entry : g_entries) {
     bool is_track_added = false;
     for (const auto& track : g_tracks) {
@@ -150,11 +144,15 @@ DLLEXPORT void LibraryRefresh() {
       }
     }
     if (!is_track_added) {
+      /* TODO (alexmercerind): Not multi-threaded yet. */
       auto track = GetTrackFromEntry(entry);
       if (track) {
         InsertTrack(track.value());
+        g_tracks.emplace_back(track.value());
       }
     }
+    g_progress_callback(count, g_entries.size());
+    count++;
   }
   LibraryIndexAlbumsArtists();
 }
@@ -166,9 +164,7 @@ DLLEXPORT void LibraryCreate() {
     sqlite3_exec(g_library_cache, kLibraryDatabaseCreateQuery, nullptr, 0,
                  nullptr);
     LibraryIndex();
-    if (!library_create_completed) {
-      library_create_promise.get_future().wait();
-    }
+    g_library_create_promise.get_future().wait();
   } else {
     LibraryRefresh();
   }
