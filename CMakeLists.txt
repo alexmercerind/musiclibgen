@@ -51,6 +51,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL Windows)
   target_link_libraries(
     ${PROJECT_NAME} PRIVATE
     ${EXTERNAL}/Developers/Project/MSVC2019/X64/Release/MediaInfo.lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/bin/sqlite3.lib
   )
-  add_definitions(-DUNICODE -D_UNICODE)
+  add_definitions(-DUNICODE -D_UNICODE -DDEBUG)
 endif()
