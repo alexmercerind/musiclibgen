@@ -26,12 +26,12 @@
 #include <string>
 #include <vector>
 #include <future>
+#include <cstdio>
 #include <cstring>
 #include <cassert>
 #include <fstream>
 #include <mutex>
 #include <optional>
-#include <iostream>
 #include <algorithm>
 #include <filesystem>
 #include <unordered_map>
@@ -42,7 +42,9 @@ extern "C" {
 }
 
 #ifdef DEBUG
-#define DEBUG_LOG(value) std::cout << #value << " : " << value << std::endl;
+#define DEBUG_LOG(value) printf("%s : %s\n", #value, value)
+#else
+#define DEBUG_LOG(value)
 #endif
 
 #ifndef DLLEXPORT

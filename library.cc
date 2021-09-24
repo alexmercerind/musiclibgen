@@ -25,50 +25,23 @@
 extern "C" {
 #endif
 
+static auto g_entries = std::vector<std::filesystem::directory_entry>{};
+
+static void (*g_progress_callback)(int32_t, int32_t) = nullptr;
+
 static auto g_count = 0;
 static auto g_futures = std::vector<std::future<void>>{};
+
 static auto library_create_promise = std::promise<void>();
 static auto library_create_completed = false;
-static auto g_entries = std::vector<std::filesystem::directory_entry>{};
+
 static auto g_mutex = std::mutex();
-static void (*g_progress_callback)(int32_t, int32_t) = nullptr;
 
 static inline int32_t LibraryCallback(void*, int argc, char** argv,
                                       char** azColName) {
   auto track = GetTrackFromCache(argv);
   g_tracks.emplace_back(track);
   return 0;
-}
-
-static inline void LibraryIndex() {
-  g_count = 0;
-  for (const auto& library_path : g_library_paths) {
-    for (const auto& entry :
-         std::filesystem::recursive_directory_iterator(library_path)) {
-      g_entries.emplace_back(entry);
-    }
-  }
-  for (const auto& entry : g_entries) {
-    g_futures.emplace_back(std::async([=]() {
-      auto track = GetTrackFromEntry(entry);
-      g_mutex.lock();
-      if (track) {
-        g_tracks.emplace_back(*track);
-      }
-      g_count++;
-      (*g_progress_callback)(g_count, g_entries.size());
-      g_mutex.unlock();
-      if (g_count == g_entries.size()) {
-        for (const auto& track : g_tracks) {
-          InsertTrack(track);
-        }
-        if (!library_create_completed) {
-          library_create_promise.set_value();
-          library_create_completed = true;
-        }
-      }
-    }));
-  }
 }
 
 static inline void LibraryIndexAlbumsArtists() {
@@ -94,6 +67,32 @@ static inline void LibraryIndexAlbumsArtists() {
   }
 }
 
+static inline void LibraryIndex() {
+  g_count = 0;
+  for (const auto& entry : g_entries) {
+    g_futures.emplace_back(std::async([=]() {
+      auto track = GetTrackFromEntry(entry);
+      g_mutex.lock();
+      if (track) {
+        g_tracks.emplace_back(*track);
+      }
+      g_count++;
+      (*g_progress_callback)(g_count, g_entries.size());
+      g_mutex.unlock();
+      if (g_count == g_entries.size()) {
+        for (const auto& track : g_tracks) {
+          InsertTrack(track);
+        }
+        if (!library_create_completed) {
+          library_create_promise.set_value();
+          library_create_completed = true;
+        }
+      }
+    }));
+  }
+  LibraryIndexAlbumsArtists();
+}
+
 DLLEXPORT
 void LibrarySetProgressCallback(void (*callback)(int32_t completed,
                                                  int32_t total)) {
@@ -114,6 +113,50 @@ DLLEXPORT void LibrarySetLibraryPaths(int32_t size, const char** paths) {
   for (size_t index = 0; index < size; index++) {
     g_library_paths.emplace_back(std::string(paths[index]));
   }
+  for (const auto& library_path : g_library_paths) {
+    for (const auto& entry :
+         std::filesystem::recursive_directory_iterator(library_path)) {
+      g_entries.emplace_back(entry);
+    }
+  }
+}
+
+DLLEXPORT void LibraryRefresh() {
+  auto cache_path = std::filesystem::path(g_cache_path) / "tracks.db";
+  sqlite3_open(cache_path.string().c_str(), &g_library_cache);
+  sqlite3_exec(g_library_cache, "SELECT * FROM Tracks;", LibraryCallback, 0,
+               nullptr);
+  std::remove_if(g_tracks.begin(), g_tracks.end(), [](auto track) {
+    auto exists =
+        std::filesystem::exists(std::filesystem::path(track.file_path));
+    if (!exists) {
+      char* track_delete_error;
+      if (sqlite3_exec(g_library_cache,
+                       (std::string("DELETE FROM Tracks WHERE file_path='") +
+                        Strings::ReplaceAll(track.file_path, "'", "''") + "';")
+                           .c_str(),
+                       LibraryCallback, 0, nullptr) != S_OK) {
+        DEBUG_LOG(track_delete_error);
+      };
+    }
+    return !exists;
+  });
+  for (const auto& entry : g_entries) {
+    bool is_track_added = false;
+    for (const auto& track : g_tracks) {
+      if (entry.path().string().compare(track.file_path) == 0) {
+        is_track_added = true;
+        break;
+      }
+    }
+    if (!is_track_added) {
+      auto track = GetTrackFromEntry(entry);
+      if (track) {
+        InsertTrack(track.value());
+      }
+    }
+  }
+  LibraryIndexAlbumsArtists();
 }
 
 DLLEXPORT void LibraryCreate() {
@@ -127,23 +170,8 @@ DLLEXPORT void LibraryCreate() {
       library_create_promise.get_future().wait();
     }
   } else {
-    sqlite3_open(cache_path.string().c_str(), &g_library_cache);
-    sqlite3_exec(g_library_cache, "SELECT * FROM Tracks;", LibraryCallback, 0,
-                 nullptr);
-    std::remove_if(g_tracks.begin(), g_tracks.end(), [](auto track) {
-      auto exists =
-          std::filesystem::exists(std::filesystem::path(track.file_path));
-      if (!exists) {
-        sqlite3_exec(g_library_cache,
-                     (std::string("DELETE FROM Tracks WHERE file_path='") +
-                      Strings::ReplaceAll(track.file_path, "'", "''") + "';")
-                         .c_str(),
-                     LibraryCallback, 0, nullptr);
-      }
-      return !exists;
-    });
+    LibraryRefresh();
   }
-  LibraryIndexAlbumsArtists();
 }
 
 DLLEXPORT int32_t LibraryGetTrackCount() { return g_tracks.size(); };
