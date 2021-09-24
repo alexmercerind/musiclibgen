@@ -16,14 +16,30 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-#include "base.h"
+#include <stdint.h>
+
 #include "structs.h"
 
 #ifndef MUSICLIBGEN_H_
 #define MUSICLIBGEN_H_
 
+#ifndef DLLEXPORT
+#ifdef _WIN32
+#define DLLEXPORT __declspec(dllexport)
+#else
+#define DLLEXPORT
+#endif
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 DLLEXPORT void LibrarySetCachePath(const char* path);
 DLLEXPORT void LibrarySetLibraryPaths(int32_t size, const char** paths);
 DLLEXPORT void LibraryIndex(void (*callback)(int32_t completed, int32_t total));
 
+#ifdef __cplusplus
+}
+#endif
 #endif

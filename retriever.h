@@ -16,11 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include "MediaInfoDLL/MediaInfoDLL.h"
-
 #ifndef RETRIEVER_H_
 #define RETRIEVER_H_
+
+#include "constants.h"
+
+#include "MediaInfoDLL/MediaInfoDLL.h"
 
 class Retriever : public MediaInfoDLL::MediaInfo {
  public:
@@ -34,20 +35,6 @@ class Retriever : public MediaInfoDLL::MediaInfo {
   void SetFilePath(std::string file_path);
 
   ~Retriever();
-
-  const std::unordered_map<std::string, std::wstring> kMetadataKeys = {
-      {"track_name", L"Track"},
-      {"track_artist_names", L"Performer"},
-      {"album_name", L"Album"},
-      {"album_artist_name", L"Album/Performer"},
-      {"track_number", L"Track/Position"},
-      {"album_length", L"Track/Position_Total"},
-      {"year", L"Recorded_Date"},
-      {"genre", L"Genre"},
-      {"writer_name", L"WrittenBy"},
-      {"track_duration", L"Duration"},
-      {"bitrate", L"OverallBitRate"},
-  };
 
  private:
   std::unique_ptr<std::unordered_map<std::string, std::string>> metadata_ =

@@ -51,14 +51,6 @@ static inline char* strndup(const char* array, size_t size) {
 }
 #endif
 
-static inline std::string EmptyOrAssign(std::string string,
-                                        std::string replacement) {
-  if (string.compare("") == 0) {
-    return replacement;
-  }
-  return string;
-}
-
 auto TO_WIDESTRING = [](std::string string) -> std::wstring {
   return std::wstring(string.begin(), string.end());
 };
@@ -145,6 +137,25 @@ class Strings {
   static inline std::string ToUpperCase(std::string& string) {
     std::transform(string.begin(), string.end(), string.begin(), ::toupper);
     return string;
+  }
+
+  static inline std::string ReplaceAll(std::string string,
+                                       const std::string& from,
+                                       const std::string& to) {
+    size_t start_pos = 0;
+    while ((start_pos = string.find(from, start_pos)) != std::string::npos) {
+      string.replace(start_pos, from.length(), to);
+      start_pos += to.length();
+    }
+    return string;
+  }
+
+  static inline std::string EmptyOrAssign(std::string string,
+                                          std::string replacement) {
+    if (string.compare("") == 0) {
+      return replacement;
+    }
+    return Strings::ReplaceAll(string, "'", "''");
   }
 };
 

@@ -21,40 +21,79 @@
 #include "retriever.h"
 #include "library_utils.h"
 
-DLLEXPORT void LibrarySetCachePath(const char* path) {
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int32_t g_count = 0;
+auto g_futures = std::vector<std::future<void>>{};
+auto g_entries = std::vector<std::filesystem::directory_entry>{};
+auto g_mutex = std::mutex();
+
+static int LibraryCallback(void* data, int argc, char** argv,
+                           char** azColName) {
+  int i;
+  fprintf(stderr, "%s: ", (const char*)data);
+  for (i = 0; i < argc; i++) {
+    printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+  }
+  printf("\n");
+  return 0;
+}
+
+void LibrarySetCachePath(const char* path) {
   g_cache_path = path;
-  if (!std::filesystem::exists(g_cache_path)) {
-    std::filesystem::create_directory(g_cache_path);
+  if (!std::filesystem::exists(std::filesystem::path(g_cache_path) /
+                               "album_arts")) {
+    std::filesystem::create_directories(std::filesystem::path(g_cache_path) /
+                                        "album_arts");
+  }
+  if (g_library_database == nullptr) {
+    auto database_path = std::filesystem::path(path) / "tracks.db";
+    sqlite3_open(database_path.string().c_str(), &g_library_database);
+    if (std::filesystem::exists(database_path.string())) {
+      sqlite3_exec(g_library_database, kLibraryDatabaseCreateQuery, nullptr, 0,
+                   nullptr);
+    }
   }
 }
 
-DLLEXPORT void LibrarySetLibraryPaths(int32_t size, const char** paths) {
+void LibrarySetLibraryPaths(int32_t size, const char** paths) {
   g_library_paths.reserve(size);
   for (size_t index = 0; index < size; index++) {
     g_library_paths.emplace_back(std::string(paths[index]));
   }
 }
 
-DLLEXPORT void LibraryIndex(void (*callback)(int32_t completed,
-                                             int32_t total)) {
-  // TODO (alexmercerind): Free objects.
-  auto count = new int32_t[1];
-  auto futures = new std::vector<std::future<void>>();
-  auto entries = new std::vector<std::filesystem::directory_entry>();
-  *count = 0;
+void LibraryIndex(void (*callback)(int32_t completed, int32_t total)) {
+  g_count = 0;
   for (const auto& library_path : g_library_paths) {
     for (const auto& entry :
          std::filesystem::recursive_directory_iterator(library_path)) {
-      entries->emplace_back(entry);
+      g_entries.emplace_back(entry);
     }
   }
-  for (const auto& entry : *entries) {
-    futures->emplace_back(std::async([=]() {
+  for (const auto& entry : g_entries) {
+    g_futures.emplace_back(std::async([=]() {
       auto track = GetTrack(entry);
-      (*count)++;
-      if (track.has_value()) {
+      g_mutex.lock();
+      if (track) {
+        g_tracks.emplace_back(*track);
       }
-      (*callback)(*count, entries->size());
+      g_count++;
+      (*callback)(g_count, g_entries.size());
+      g_mutex.unlock();
+      if (g_count == g_entries.size()) {
+        for (const auto& track : g_tracks) {
+          InsertTrack(track);
+        }
+        sqlite3_exec(g_library_database, "SELECT * FROM Tracks;",
+                     LibraryCallback, 0, nullptr);
+      }
     }));
   }
 }
+
+#ifdef __cplusplus
+}
+#endif
