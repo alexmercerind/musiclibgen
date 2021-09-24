@@ -20,6 +20,8 @@
 #ifndef BASE_H_
 #define BASE_H_
 
+#include "structs.h"
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -27,11 +29,21 @@
 #include <cstring>
 #include <cassert>
 #include <fstream>
+#include <mutex>
 #include <optional>
 #include <iostream>
 #include <algorithm>
 #include <filesystem>
 #include <unordered_map>
+
+extern "C" {
+#define SQLITE_API __declspec(dllexport)
+#include "external/sqlite3.h"
+}
+
+#ifdef DEBUG
+#define DEBUG_LOG(value) std::cout << #value << " : " << value << std::endl;
+#endif
 
 #ifndef DLLEXPORT
 #ifdef _WIN32
@@ -43,6 +55,6 @@
 
 static std::string g_cache_path = "";
 static std::vector<std::string> g_library_paths = {};
-static std::vector<std::unordered_map<std::string, std::string>> g_tracks = {};
-
+static std::vector<Track> g_tracks = {};
+static sqlite3* g_library_database = nullptr;
 #endif
