@@ -42,6 +42,8 @@ DLLEXPORT void LibrarySetLibraryPaths(int32_t size, const char** paths);
 DLLEXPORT void LibraryCreate();
 DLLEXPORT int32_t LibraryGetTrackCount();
 DLLEXPORT Track* LibraryGetTracks();
+DLLEXPORT int32_t LibraryGetAlbumCount();
+DLLEXPORT Album* LibraryGetAlbums();
 
 #ifdef __cplusplus
 }

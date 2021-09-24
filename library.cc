@@ -71,8 +71,32 @@ static inline void LibraryIndex() {
   }
 }
 
-DLLEXPORT void LibrarySetProgressCallback(void (*callback)(int32_t completed,
-                                                           int32_t total)) {
+static inline void LibraryIndexAlbumsArtists() {
+  for (auto& track : g_tracks) {
+    int32_t is_album_added = false;
+    for (auto& album : g_albums) {
+      if (strcmp(album.album_name, track.album_name) == 0) {
+        is_album_added = true;
+        album.tracks[album.tracks_size++] = track;
+        break;
+      }
+    }
+    if (!is_album_added) {
+      Album album;
+      strncpy(album.album_name, track.album_name, 255);
+      strncpy(album.album_artist_name, track.album_artist_name, 255);
+      strncpy(album.year, track.year, 255);
+      album.tracks[0] = track;
+      album.tracks_size = 1;
+      strncpy(album.album_art_uri, track.album_art_uri, 1024);
+      g_albums.emplace_back(album);
+    }
+  }
+}
+
+DLLEXPORT
+void LibrarySetProgressCallback(void (*callback)(int32_t completed,
+                                                 int32_t total)) {
   g_progress_callback = callback;
 }
 
@@ -107,13 +131,28 @@ DLLEXPORT void LibraryCreate() {
     sqlite3_exec(g_library_cache, "SELECT * FROM Tracks;", LibraryCallback, 0,
                  nullptr);
     std::remove_if(g_tracks.begin(), g_tracks.end(), [](auto track) {
-      return !std::filesystem::exists(std::filesystem::path(track.file_path));
+      auto exists =
+          std::filesystem::exists(std::filesystem::path(track.file_path));
+      if (!exists) {
+        sqlite3_exec(g_library_cache,
+                     (std::string("DELETE FROM Tracks WHERE file_path='") +
+                      Strings::ReplaceAll(track.file_path, "'", "''") + "';")
+                         .c_str(),
+                     LibraryCallback, 0, nullptr);
+      }
+      return !exists;
     });
   }
+  LibraryIndexAlbumsArtists();
 }
 
 DLLEXPORT int32_t LibraryGetTrackCount() { return g_tracks.size(); };
+
 DLLEXPORT Track* LibraryGetTracks() { return g_tracks.data(); };
+
+DLLEXPORT int32_t LibraryGetAlbumCount() { return g_albums.size(); };
+
+DLLEXPORT Album* LibraryGetAlbums() { return g_albums.data(); };
 
 #ifdef __cplusplus
 }

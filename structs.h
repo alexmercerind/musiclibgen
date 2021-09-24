@@ -43,23 +43,23 @@ typedef struct _Track {
 typedef struct _Album {
   char album_name[255];
   char album_artist_name[255];
-  char year[6];
-  Track* tracks;
+  char year[255];
+  Track tracks[32];
   int32_t tracks_size;
   char album_art_uri[1024];
 } Album;
 
 typedef struct _Artist {
   char artist_name[255];
-  Track* tracks;
+  Track tracks[512];
   int32_t tracks_size;
-  Album* albums;
+  Album albums[64];
   int32_t albums_size;
 } Artist;
 
 typedef struct _Playlist {
   char playlist_name[255];
-  Track* tracks;
+  Track tracks[128];
   int32_t tracks_size;
 } Playlist;
 

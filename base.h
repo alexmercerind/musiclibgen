@@ -56,5 +56,7 @@ extern "C" {
 static std::string g_cache_path = "";
 static std::vector<std::string> g_library_paths = {};
 static std::vector<Track> g_tracks = {};
+static std::vector<Album> g_albums = {};
+static std::vector<Artist> g_artists = {};
 static sqlite3* g_library_cache = nullptr;
 #endif
