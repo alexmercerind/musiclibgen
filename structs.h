@@ -16,42 +16,51 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-#include "base.h"
+#include <string.h>
+#include <stdint.h>
 
-#ifndef _STRUCTS_H_
-#define _STRUCTS_H_
+#ifndef STRUCTS_H_
+#define STRUCTS_H_
 
 typedef struct _Track {
-  std::string track_name;
-  std::string album_name;
-  std::string track_number;
-  std::string album_length;
-  std::string year;
-  std::string album_artist_name;
-  std::vector<std::string> track_artist_names;
-  std::string album_art_uri;
-  std::string file_path;
+  char track_name[255];
+  char album_name[255];
+  char track_artist_names[1024];
+  char album_artist_name[255];
+  char track_number[255];
+  char album_length[255];
+  char year[255];
+  char genre[255];
+  char writer_name[255];
+  char track_duration[255];
+  char bitrate[255];
+  char album_art_uri[1024];
+  char file_path[1024];
   int32_t file_size;
   uint64_t file_time;
 } Track;
 
 typedef struct _Album {
-  std::string album_name;
-  std::string album_artist_name;
-  std::string year;
-  std::vector<Track> tracks;
-  std::string album_art_uri;
+  char album_name[255];
+  char album_artist_name[255];
+  char year[6];
+  Track* tracks;
+  int32_t tracks_size;
+  char album_art_uri[1024];
 } Album;
 
 typedef struct _Artist {
-  std::string artist_name;
-  std::vector<Track> tracks;
-  std::vector<Album> albums;
+  char artist_name[255];
+  Track* tracks;
+  int32_t tracks_size;
+  Album* albums;
+  int32_t albums_size;
 } Artist;
 
 typedef struct _Playlist {
-  std::string playlist_name;
-  std::vector<Track> tracks;
+  char playlist_name[255];
+  Track* tracks;
+  int32_t tracks_size;
 } Playlist;
 
 #endif
