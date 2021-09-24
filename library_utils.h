@@ -33,8 +33,9 @@ static inline void InsertTrack(Track track) {
       track.album_artist_name + "', '" + track.track_number + "', '" +
       track.album_length + "', '" + track.year + "', '" + track.genre + "', '" +
       track.writer_name + "', '" + track.track_duration + "', '" +
-      track.bitrate + "', '" + track.album_art_uri + "', '" + track.file_path +
-      "', '" + std::to_string(track.file_size) + "', '" +
+      track.bitrate + "', '" + track.album_art_uri + "', '" +
+      Strings::ReplaceAll(track.file_path, "'", "''") + "', '" +
+      std::to_string(track.file_size) + "', '" +
       std::to_string(track.file_time) + "');";
   if (sqlite3_exec(g_library_cache, query.c_str(), nullptr, 0,
                    &track_insert_error) != S_OK) {
