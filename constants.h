@@ -32,6 +32,7 @@ constexpr auto kLibraryDatabaseCreateQuery =
     "CREATE TABLE Tracks("
     "   track_name CHAR(255) NOT NULL,"
     "   track_artist_names VARCHAR NOT NULL,"
+    "   album_name CHAR(255) NOT NULL,"
     "   album_artist_name CHAR(255) NOT NULL,"
     "   track_number CHAR(255) NOT NULL,"
     "   album_length CHAR(255) NOT NULL,"
